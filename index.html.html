@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لعبة XO</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    font-family: Arial, sans-serif; background: linear-gradient(135deg,#111827,#312e81);
+    color: white;
+  }
+  .game { text-align: center; width: min(92vw, 430px); }
+  h1 { font-size: 42px; margin: 0 0 8px; }
+  #status { font-size: 20px; margin: 10px 0 20px; min-height: 28px; }
+  .board {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+  }
+  .cell {
+    aspect-ratio: 1; border: 0; border-radius: 18px; background: #f8fafc;
+    color: #111827; font-size: clamp(48px,14vw,76px); font-weight: bold;
+    cursor: pointer; box-shadow: 0 7px 0 #cbd5e1; transition: .12s;
+  }
+  .cell:hover { transform: translateY(-2px); }
+  .cell:active { transform: translateY(4px); box-shadow: 0 3px 0 #cbd5e1; }
+  button.reset {
+    margin-top: 25px; padding: 13px 28px; border: 0; border-radius: 12px;
+    background: #22c55e; color: white; font-size: 18px; font-weight: bold;
+    cursor: pointer;
+  }
+  .hint { opacity: .75; margin-top: 15px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="game">
+  <h1>❌ XO ⭕</h1>
+  <div id="status">دورك — أنت ❌</div>
+  <div class="board" id="board"></div>
+  <button class="reset" onclick="resetGame()">لعبة جديدة 🔄</button>
+  <div class="hint">أنت ❌ والكمبيوتر ⭕</div>
+</div>
+
+<script>
+let board = Array(9).fill("");
+let gameOver = false;
+const human = "X", ai = "O";
+const boardEl = document.getElementById("board");
+const statusEl = document.getElementById("status");
+
+function draw() {
+  boardEl.innerHTML = "";
+  board.forEach((v, i) => {
+    const b = document.createElement("button");
+    b.className = "cell";
+    b.textContent = v === "X" ? "❌" : v === "O" ? "⭕" : "";
+    b.onclick = () => humanMove(i);
+    boardEl.appendChild(b);
+  });
+}
+
+function winner(b) {
+  const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for (const [a,c,d] of lines)
+    if (b[a] && b[a] === b[c] && b[a] === b[d]) return b[a];
+  return b.every(Boolean) ? "draw" : null;
+}
+
+function humanMove(i) {
+  if (gameOver || board[i]) return;
+  board[i] = human;
+  draw();
+  let result = winner(board);
+  if (result) return finish(result);
+  statusEl.textContent = "الكمبيوتر يفكر... 🤔";
+  setTimeout(aiMove, 350);
+}
+
+function aiMove() {
+  if (gameOver) return;
+  const empty = board.map((v,i)=>v ? null:i).filter(i=>i!==null);
+  let move = findBestMove();
+  board[move ?? empty[Math.floor(Math.random()*empty.length)]] = ai;
+  draw();
+  const result = winner(board);
+  if (result) return finish(result);
+  statusEl.textContent = "دورك — أنت ❌";
+}
+
+function findBestMove() {
+  let best = -Infinity, move = null;
+  for (let i=0;i<9;i++) if (!board[i]) {
+    board[i]=ai;
+    const score=minimax(board,false);
+    board[i]="";
+    if (score>best) { best=score; move=i; }
+  }
+  return move;
+}
+
+function minimax(b, maximizing) {
+  const r = winner(b);
+  if (r === ai) return 10;
+  if (r === human) return -10;
+  if (r === "draw") return 0;
+  if (maximizing) {
+    let best=-Infinity;
+    for(let i=0;i<9;i++) if(!b[i]) { b[i]=ai; best=Math.max(best,minimax(b,false)); b[i]=""; }
+    return best;
+  } else {
+    let best=Infinity;
+    for(let i=0;i<9;i++) if(!b[i]) { b[i]=human; best=Math.min(best,minimax(b,true)); b[i]=""; }
+    return best;
+  }
+}
+
+function finish(result) {
+  gameOver = true;
+  if (result === "draw") statusEl.textContent = "تعادل! 🤝";
+  else if (result === human) statusEl.textContent = "مبروك! ربحت 🎉";
+  else statusEl.textContent = "الكمبيوتر ربح 😄";
+}
+
+function resetGame() {
+  board = Array(9).fill("");
+  gameOver = false;
+  statusEl.textContent = "دورك — أنت ❌";
+  draw();
+}
+draw();
+</script>
+</body>
+</html>
